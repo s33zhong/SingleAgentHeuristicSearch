@@ -44,7 +44,7 @@ class SlidingTilesSolver:
         # Initialize the current cost to the heuristic cost of the initial state
         current_h_cost = self.heuristic(start_state)
         current_f_cost = current_g_cost + current_h_cost
-        max_iterations = 5
+        max_iterations = 50
         iteration = 0
         while not self.sliding_tiles.is_solved():
             if verbose:
