@@ -30,6 +30,28 @@ class GridSolver:
                     print('. ', end='')
             print()
 
+    def update_open_list(self, open_list, f_cost, g_cost, state, contains_g_cost=True):
+        """
+        Update the f_cost of a state in the open list
+        :param f_cost:          float, f-cost of the state
+        :param g_cost:          float, g-cost of the state
+        :param contains_g_cost: bool, whether the f-cost contains g-cost
+        :param open_list:       list, a heapq-based priority queue
+        :param state:           tuple, a state (location) on the grid
+        :return:
+        """
+        # Find the index of the state in the open list
+        index = self.index_in_open_list(state, open_list)
+        if index == -1:
+            raise ValueError('State {} not in open list'.format(state))
+        else:
+            if contains_g_cost:
+                # Update the f_cost, g_cost of the state
+                open_list[index] = (f_cost, g_cost, state)
+            else:
+                # Update the f_cost of the state
+                open_list[index] = (f_cost, state)
+
     def visualize_obstacle(self):
         """
         Visualize the obstacles in the grid; obstacles are represented by 'x'
@@ -65,6 +87,7 @@ class GridSolver:
 
     def greedy_best_first_search(self):
         """
+        Note: Greedy BFS is neither optimal nor complete
         greedy_best_first_search algorithm that takes in a grid, a heuristic, a start state, and a goal state,
           and returns a path from the start state to the goal state if possible; and False is returned if otherwise
         :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
@@ -79,7 +102,7 @@ class GridSolver:
         # Initialize the open list to contain the initial state; we use heapq to implement the priority queue
         open_list = []
         heapq.heappush(open_list, (current_f_cost, current_state))
-        max_iter = 20
+        max_iter = 100
         iteration = 0
         while len(open_list) > 0 \
                 and iteration < max_iter:  # while the open list is not empty, we can continue expanding states
@@ -88,12 +111,13 @@ class GridSolver:
             # pop the state with the lowest f-cost from the open list
             expanded_state = heapq.heappop(open_list)
             current_f_cost, current_state = expanded_state[0], expanded_state[1]
-            print('Current f cost: ', current_f_cost)
+            # print('Current f cost: ', current_f_cost)
             closed_list[current_state] = last_state  # add the current state to the closed list
             successors = self.grid.get_successors(current_state, obstacles=self.obstacles)
             print('Current state: ', current_state)
             if not successors:
-                print('Expanding a state with no successors! Current state: ', current_state)
+                # print('Expanding a state with no successors! Current state: ', current_state)
+                pass
             else:
                 for successor in successors:
                     if successor == self.grid.get_goal():
@@ -115,42 +139,119 @@ class GridSolver:
                     # print('Index in open list: ', index_in_open_list)
                     if successor in closed_list.keys():  # successor in closed list
                         continue
-                    elif index_in_open_list == -1:
+                    else:
                         successor_f_cost = self.heuristic(successor, self.grid.get_goal())
-                        # Add the successor to the open list; we are using heapq to implement the priority queue
-                        heapq.heappush(open_list, (successor_f_cost, successor))
-                        # print('Added successor to open list: ', successor)
-                    # If the successor is in the open list, check if the current f-cost is lower than the f-cost of the
-                    #   successor; if so, update the f-cost of the successor and set the parent of the successor to the
-                    #   current state.
-                    elif index_in_open_list != -1:
-                        # print('Successor in open list: ', successor)
-                        # print('Open list: ', open_list)
-                        # If the current g-cost is lower than the g-cost of the successor, update the f-cost of the
-                        #   successor and set the parent of the successor to the current state
-                        if current_f_cost < self.heuristic(successor, self.grid.get_goal()):
-                            heapq.heappush(open_list, (current_f_cost, successor))
-                            print('Updated f-cost of successor: ', successor)
-                        else:
-                            # print('Not a better path to successor: ', successor)
-                            continue
-            print('------------------------------------')
-            print('Open list: ', open_list)
-            print('Closed list: ', closed_list)
-            print('------------------------------------')
+                        if index_in_open_list == -1:  # successor not in open list
+                            # Add the successor to the open list; we are using heapq to implement the priority queue
+                            heapq.heappush(open_list, (successor_f_cost, successor))
+                            # print('Added successor to open list: ', successor)
+
+                        else:  # successor in open list
+                            # If the current f-cost is lower than the f-cost of the successor, update the f-cost of the
+                            #   successor
+                            if self.heuristic(successor, self.grid.get_goal()) < current_f_cost:
+                                self.update_open_list(open_list, f_cost=successor_f_cost,
+                                                      g_cost=None, state=successor,
+                                                      contains_g_cost=False)
+                                # print('Updated f-cost of successor: ', successor)
+                            else:
+                                # print('Not a better path to successor: ', successor)
+                                continue
+            # print('------------------------------------')
+            # print('Open list: ', open_list)
+            # print('Closed list: ', closed_list)
+            # print('------------------------------------')
 
         # If the open list is empty, return False; path is impossible or the algorithm has failed (which theoretically
         #   should not happen)
         return False, False
 
-    # def greedy_best_first_search(self):
-    #     """
-    #     Greedy best-first search algorithm that takes in a grid, a heuristic, a start state, and a goal state, and
-    #     returns a path from the start state to the goal state if possible; and False is returned if otherwise
-    #     :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
-    #                  or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
-    #     """
-    #     pass
+    def a_star(self):
+        """
+        Note: A* is optimal and complete
+        A* algorithm that takes in a grid, a heuristic, a start state, and a goal state, and returns a path from
+          the start state to the goal state if possible; and False is returned if otherwise
+        :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
+                     or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
+        """
+        # Initialize the current state to the initial state
+        current_state = self.grid.get_start()
+        # Initialize the current g-cost to 0
+        current_g_cost = 0
+        # Initialize the current cost to the heuristic cost of the initial state
+        current_f_cost = self.heuristic(current_state, self.grid.get_goal()) + current_g_cost
+        # Initialize the closed list to be empty
+        closed_list = dict()  # We need to store the parent! Sets do not suffice. Keys -> states, Values -> parents
+        # Initialize the open list to contain the initial state; we use heapq to implement the priority queue
+        open_list = []
+        heapq.heappush(open_list, (current_f_cost, current_g_cost, current_state))
+        max_iter = 100
+        iteration = 0
+        while len(open_list) > 0 \
+                and iteration < max_iter:  # while the open list is not empty, we can continue expanding states
+            iteration += 1
+            last_state = current_state  # store the last state for updating the closed list
+            # pop the state with the lowest f-cost from the open list
+            expanded_state = heapq.heappop(open_list)
+            current_f_cost, current_g_cost, current_state = expanded_state[0], expanded_state[1], expanded_state[2]
+            # print('Current f cost: ', current_f_cost)
+            closed_list[current_state] = last_state  # add the current state to the closed list
+            successors = self.grid.get_successors(current_state, obstacles=self.obstacles)
+            print('Current state: ', current_state)
+            if not successors:
+                # print('Expanding a state with no successors! Current state: ', current_state)
+                pass
+            else:
+                for successor in successors:
+                    if successor == self.grid.get_goal():
+                        closed_list[successor] = current_state  # add the current state to the closed list
+                        # If the successor is the goal, return the path from the initial state to the goal state
+                        path = [successor]
+                        parent = closed_list[successor]
+                        start = self.grid.get_start()
+                        while parent != start:
+                            path.append(parent)
+                            parent = closed_list[parent]
+                        path.append(start)
+                        path.reverse()
+                        return path, current_f_cost
+                    # print('Successor: ', successor)
+                    index_in_open_list = self.index_in_open_list(successor, open_list)
+                    # If the successor is not in the closed list and not in the open list, add it to the open list
+                    #   and set the parent of the successor to the current state
+                    # print('Index in open list: ', index_in_open_list)
+                    if successor in closed_list.keys():  # successor in closed list
+                        continue
+                    else:
+                        successor_g_cost = current_g_cost + 1
+                        successor_f_cost = self.heuristic(successor, self.grid.get_goal()) + successor_g_cost
+
+                        if index_in_open_list == -1:  # not in open list
+                            # Add the successor to the open list; we are using heapq to implement the priority queue
+                            heapq.heappush(open_list, (successor_f_cost, successor_g_cost, successor))
+                            # print('Added successor to open list: ', successor)
+                        else:  # in open list
+                            # print('Successor in open list: ', successor)
+                            # print('Open list: ', open_list)
+                            # If the current f-cost is lower than the f-cost of the successor, update the f-cost of the
+                            #   successor and set the parent of the successor to the current state
+                            if successor_f_cost < current_f_cost:
+                                self.update_open_list(open_list, f_cost=successor_f_cost,
+                                                      g_cost=successor_g_cost, state=successor,
+                                                      contains_g_cost=True)
+                                heapq.heappush(open_list, (current_f_cost, successor))
+                                # print('Updated f-cost of successor: ', successor)
+                            else:
+                                # print('Not a better path to successor: ', successor)
+                                continue
+            # print('------------------------------------')
+            # print('Open list: ', open_list)
+            # print('Closed list: ', closed_list)
+            # print('------------------------------------')
+
+        # If the open list is empty, return False; path is impossible or the algorithm has failed (which theoretically
+        #   should not happen)
+        return False, False
 
     def iterative_deepening_a_star(self):
         """
