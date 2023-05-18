@@ -74,6 +74,7 @@ class SlidingTiles(StateSpace):
         Calculate the Manhattan distance between the current state and the goal state (solved state), which is
           the sum of the moves each tile need to take to reach its goal position, ignoring all tiles in their way.
         This is a relaxation from the problem, and an admissible heuristic function used in the A* algorithm.
+        This method takes O(n) time and O(1) space as it iterates over the entire state once.
         :param state: the state to calculate the Manhattan distance for; if None, then the current state is used
         :return:      the Manhattan distance between the current state and the goal state
         """
@@ -139,6 +140,8 @@ class SlidingTiles(StateSpace):
     def get_successors(self, action, verbose=False):
         """
         Get the successors of the current state by applying the given action on it.
+        This method would require O(1) time and O(n) space where n is the number of tiles (which would be constant,
+            so O(1) as well). In particular, the time complexity is O(1) because the number of actions is 4.
         :param verbose:   whether to print the action and its consequence or not
         :param action:    str, the action to be applied on the current state, one of ['up', 'down', 'left', 'right']
         :return:  either: list, the successor state of the current state with the given action applied on it;
@@ -164,6 +167,8 @@ class SlidingTiles(StateSpace):
         """
         Check if a state is the goal state (solved state) if a state is not supplied, check the current state
           of the board.
+        This method takes O(n) time and O(1) space where n is the number of tiles (which would be constant,
+            so O(1) as well).
         :return: True if the current state is the goal state, False otherwise
         """
         if state is None:

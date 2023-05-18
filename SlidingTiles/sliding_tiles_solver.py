@@ -8,17 +8,18 @@ class SlidingTilesSolver:
         self.g_cost_per_move = 1
 
     def visualize_board(self, state=None):
+        output_buffer = ''
         if state is None:
-            for i in self.sliding_tiles.current_state:
-                print(str(i) + ' ')
+            for i in range(len(self.sliding_tiles.current_state)):
+                output_buffer += str(self.sliding_tiles.current_state[i]) + ' '
                 if i % self.sliding_tiles.width == self.sliding_tiles.width - 1 and i != 0:
-                    print()
+                    output_buffer += '\n'
         else:
-            for i in state:
-                print(str(i) + ' ')
+            for i in range(len(state)):
+                output_buffer += str(str(state[i]) + ' ')
                 if i % self.sliding_tiles.width == self.sliding_tiles.width - 1 and i != 0:
-                    print()
-        return True
+                    output_buffer += '\n'
+        return output_buffer
 
     def a_star(self, start_state=None, verbose=False):
         """
@@ -43,7 +44,7 @@ class SlidingTilesSolver:
         # Initialize the current cost to the heuristic cost of the initial state
         current_h_cost = self.heuristic(start_state)
         current_f_cost = current_g_cost + current_h_cost
-        max_iterations = 5
+        max_iterations = 50
         iteration = 0
         while not self.sliding_tiles.is_solved():
             if verbose:
