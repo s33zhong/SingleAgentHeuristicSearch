@@ -1,8 +1,10 @@
 from grid import Grid
+import heapq
+from queue import PriorityQueue
 
 
 class GridSolver:
-    def __init__(self, grid, obstacles):
+    def __init__(self, grid: Grid, obstacles):
         self.grid = grid
         self.heuristic = grid.euclidean_distance_2d
         self.g_cost_per_step = 1
@@ -28,126 +30,127 @@ class GridSolver:
                     print('. ', end='')
             print()
 
-    def visualize_obstacle(self, obstacles):
+    def visualize_obstacle(self):
         """
         Visualize the obstacles in the grid; obstacles are represented by 'x'
-        :param obstacles: set, a set of locations on a grid
         :return:
         """
         for y in range(self.grid.grid_y_length):
             for x in range(self.grid.grid_x_length):
-                if (x, y) in obstacles:
+                if (x, y) in self.obstacles:
                     print('x ', end='')
                 else:
                     print('. ', end='')
             print()
 
-# ------------------------------------ Optimal Algorithms ------------------------------------
-
-    def a_star(self):
+    @staticmethod
+    def index_in_open_list(state, open_list):
         """
-        A* algorithm that takes in a grid, a heuristic, a start state, and a goal state, and returns a path from the
-        start state to the goal state if possible; and False is returned if otherwise
-        :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
-                     or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
+        Check if a state is in the open list, a heapq-based priority queue.
+        This method is very slow unfortunately, as we need to iterate through the entire list to check for membership.
+        :param state:     tuple, a state (location) on the grid
+        :param open_list: list, a heapq-based priority queue
+        :return:          int, index of item if found and -1 otherwise
         """
-        # Initialize the current state to the initial state
-        current_state = self.grid.get_start()
-        # Initialize the current path to the initial state
-        current_path = [current_state]
-        # Initialize the current g-cost to 0
-        current_g_cost = 0
-        # Initialize the current cost to the heuristic cost of the initial state
-        current_h_cost = self.heuristic(current_state, self.grid.get_goal())
-        current_f_cost = current_g_cost + current_h_cost
+        for item_index in range(len(open_list)):  # starts from 0 so we are safe returning -1
+            if open_list[item_index][1] == state:
+                return item_index
+        return -1
 
-        # While the current state is not the goal state
-        while current_state != self.grid.get_goal():
-            # Get the successors of the current state
-            successors = self.grid.get_successors(current_state=current_state,
-                                                  obstacles=self.obstacles)
+    def solve(self, algorithm='greedy_best_first_search'):
+        if algorithm == 'greedy_best_first_search':
+            return self.greedy_best_first_search()
 
-            # Initialize the successor with the lowest cost to the first successor
-            successor_with_lowest_cost = successors[0]
-            # Initialize the lowest cost to the cost of the successor with the lowest cost
-            lowest_cost = self.heuristic(successor_with_lowest_cost, self.grid.get_goal())
-
-            # For each successor
-            for successor in successors[1:]:  # Skip the first successor since it's already been initialized
-                # If the cost of the successor is less than the lowest cost
-                if self.heuristic(successor, self.grid.get_goal()) < lowest_cost:
-                    # Set the successor with the lowest cost to the successor
-                    successor_with_lowest_cost = successor
-                    # Set the lowest cost to the cost of the successor
-                    lowest_cost = self.heuristic(successor, self.grid.get_goal())
-
-            # Set the current state to the successor with the lowest cost
-            current_state = successor_with_lowest_cost
-
-            if current_state in current_path:
-                raise ValueError('Path is not possible, current state has been expanded twice')
-            # Add the current state to the current path
-            else:
-                current_path.append(current_state)
-            # Set the current h-cost to the lowest cost (we can do this because g-cost is always 1!)
-            current_h_cost = lowest_cost
-            # Set the current g-cost to the current g-cost plus 1 (due to the nature of our movement: no diagonal edges)
-            current_g_cost += self.g_cost_per_step
-            # Set the current f-cost to the current g-cost plus the current h-cost
-            current_f_cost = current_g_cost + current_h_cost
-
-        # Return the current path and the current cost
-        return current_path, current_f_cost
+    # ------------------------------------ Optimal Algorithms ------------------------------------
 
     def greedy_best_first_search(self):
         """
-        Greedy best-first search algorithm that takes in a grid, a heuristic, a start state, and a goal state, and
-        returns a path from the start state to the goal state if possible; and False is returned if otherwise
+        greedy_best_first_search algorithm that takes in a grid, a heuristic, a start state, and a goal state,
+          and returns a path from the start state to the goal state if possible; and False is returned if otherwise
         :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
                      or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
         """
         # Initialize the current state to the initial state
         current_state = self.grid.get_start()
-        # Initialize the current path to the initial state
-        current_path = [current_state]
-        # Greedy BFS only has a heuristic cost, so we don't need a g-cost
         # Initialize the current cost to the heuristic cost of the initial state
-        current_h_cost = self.heuristic(current_state, self.grid.get_goal())
-
-        # While the current state is not the goal state
-        while current_state != self.grid.get_goal():
-            # Get the successors of the current state
-            successors = self.grid.get_successors(current_state=current_state,
-                                                  obstacles=self.obstacles)
-
-            # Initialize the successor with the lowest cost to the first successor
-            successor_with_lowest_cost = successors[0]
-            # Initialize the lowest cost to the cost of the successor with the lowest cost
-            lowest_cost = self.heuristic(successor_with_lowest_cost, self.grid.get_goal())
-
-            # For each successor
-            for successor in successors[1:]:
-                # If the cost of the successor is less than the lowest cost
-                if self.heuristic(successor, self.grid.get_goal()) < lowest_cost:
-                    # Set the successor with the lowest cost to the successor
-                    successor_with_lowest_cost = successor
-                    # Set the lowest cost to the cost of the successor
-                    lowest_cost = self.heuristic(successor, self.grid.get_goal())
-
-            # Set the current state to the successor with the lowest cost
-            current_state = successor_with_lowest_cost
-
-            if current_state in current_path:
-                raise ValueError('Path is not possible, current state has been expanded twice')
-            # Add the current state to the current path
+        current_f_cost = self.heuristic(current_state, self.grid.get_goal())
+        # Initialize the closed list to be empty
+        closed_list = dict()  # We need to store the parent! Sets do not suffice. Keys -> states, Values -> parents
+        # Initialize the open list to contain the initial state; we use heapq to implement the priority queue
+        open_list = []
+        heapq.heappush(open_list, (current_f_cost, current_state))
+        max_iter = 20
+        iteration = 0
+        while len(open_list) > 0 \
+                and iteration < max_iter:  # while the open list is not empty, we can continue expanding states
+            iteration += 1
+            last_state = current_state  # store the last state for updating the closed list
+            # pop the state with the lowest f-cost from the open list
+            expanded_state = heapq.heappop(open_list)
+            current_f_cost, current_state = expanded_state[0], expanded_state[1]
+            print('Current f cost: ', current_f_cost)
+            closed_list[current_state] = last_state  # add the current state to the closed list
+            successors = self.grid.get_successors(current_state, obstacles=self.obstacles)
+            print('Current state: ', current_state)
+            if not successors:
+                print('Expanding a state with no successors! Current state: ', current_state)
             else:
-                current_path.append(current_state)
-            # Set the current h-cost to the lowest cost (we can do this because g-cost is always 1!)
-            current_h_cost = lowest_cost
+                for successor in successors:
+                    if successor == self.grid.get_goal():
+                        closed_list[successor] = current_state  # add the current state to the closed list
+                        # If the successor is the goal, return the path from the initial state to the goal state
+                        path = [successor]
+                        parent = closed_list[successor]
+                        start = self.grid.get_start()
+                        while parent != start:
+                            path.append(parent)
+                            parent = closed_list[parent]
+                        path.append(start)
+                        path.reverse()
+                        return path, current_f_cost
+                    # print('Successor: ', successor)
+                    index_in_open_list = self.index_in_open_list(successor, open_list)
+                    # If the successor is not in the closed list and not in the open list, add it to the open list
+                    #   and set the parent of the successor to the current state
+                    # print('Index in open list: ', index_in_open_list)
+                    if successor in closed_list.keys():  # successor in closed list
+                        continue
+                    elif index_in_open_list == -1:
+                        successor_f_cost = self.heuristic(successor, self.grid.get_goal())
+                        # Add the successor to the open list; we are using heapq to implement the priority queue
+                        heapq.heappush(open_list, (successor_f_cost, successor))
+                        # print('Added successor to open list: ', successor)
+                    # If the successor is in the open list, check if the current f-cost is lower than the f-cost of the
+                    #   successor; if so, update the f-cost of the successor and set the parent of the successor to the
+                    #   current state.
+                    elif index_in_open_list != -1:
+                        # print('Successor in open list: ', successor)
+                        # print('Open list: ', open_list)
+                        # If the current g-cost is lower than the g-cost of the successor, update the f-cost of the
+                        #   successor and set the parent of the successor to the current state
+                        if current_f_cost < self.heuristic(successor, self.grid.get_goal()):
+                            heapq.heappush(open_list, (current_f_cost, successor))
+                            print('Updated f-cost of successor: ', successor)
+                        else:
+                            # print('Not a better path to successor: ', successor)
+                            continue
+            print('------------------------------------')
+            print('Open list: ', open_list)
+            print('Closed list: ', closed_list)
+            print('------------------------------------')
 
-        # Return the current path and the current cost (we don't need to return h-cost as it is always 0,
-        # but we do it for consistency among the different algorithms' outputs)
-        return current_path, current_h_cost
+        # If the open list is empty, return False; path is impossible or the algorithm has failed (which theoretically
+        #   should not happen)
+        return False, False
+
+    # def greedy_best_first_search(self):
+    #     """
+    #     Greedy best-first search algorithm that takes in a grid, a heuristic, a start state, and a goal state, and
+    #     returns a path from the start state to the goal state if possible; and False is returned if otherwise
+    #     :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
+    #                  or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
+    #     """
+    #     pass
 
     def iterative_deepening_a_star(self):
         """
@@ -156,56 +159,15 @@ class GridSolver:
         :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
                      or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
         """
-        # Initialize the current state to the initial state
-        current_state = self.grid.get_start()
-        # Initialize the current path to the initial state
-        current_path = [current_state]
-        # Initialize the current g-cost to 0
-        current_g_cost = 0
-        # Initialize the current cost to the heuristic cost of the initial state
-        current_h_cost = self.heuristic(current_state, self.grid.get_goal())
-        current_f_cost = current_g_cost + current_h_cost
+        pass
 
-        # Initialize the current depth to 0
-        current_depth = 0
-        # Initialize the depth of the goal to infinity
-        goal_depth = float('inf')
-
-        # While the current state is not the goal state
-        while current_state != self.grid.get_goal():
-            # Get the successors of the current state
-            successors = self.grid.get_successors(current_state=current_state,
-                                                  obstacles=self.obstacles)
-
-            # Initialize the successor with the lowest cost to the first successor
-            successor_with_lowest_cost = successors[0]
-            # Initialize the lowest cost to the cost of the successor with the lowest cost
-            lowest_cost = self.heuristic(successor_with_lowest_cost, self.grid.get_goal())
-
-            # For each successor
-            for successor in successors[1:]:
-                # If the cost of the successor is less than the lowest cost
-                if self.heuristic(successor, self.grid.get_goal()) < lowest_cost:
-                    # Set the successor with the lowest cost to the successor
-                    successor_with_lowest_cost = successor
-                    # Set the lowest cost to the cost of the successor
-                    lowest_cost = self.heuristic(successor, self.grid.get_goal())
-
-            # If the current depth is greater than or equal to the goal depth
-            if current_depth >= goal_depth:
-                # Return False, as the goal is unreachable
-                return False
-        # Return the current path and the current cost (we don't need to return h-cost as it is always 0,
-        # but we do it for consistency among the different algorithms' outputs)
-        return current_path, current_f_cost
-
-
-# ------------------------------------ Suboptimal Algorithms ------------------------------------
+    # ------------------------------------ Suboptimal Algorithms ------------------------------------
     """
     The weight is a parameter that can be adjusted to change the behavior of the algorithm. A weight of 1 is 
      equivalent to A* search. A weight greater than 1 will cause the algorithm to favor a greedy approach in terms
         of reducing the heuristic, and vice versa for a weight less than 1.
     """
+
     def weighted_a_star(self, weight):
         """
         Weighted A* algorithm that takes in a grid, a heuristic, a start state, and a goal state, and returns a path
@@ -214,52 +176,4 @@ class GridSolver:
         :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
                      or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
         """
-        # Initialize the current state to the initial state
-        current_state = self.grid.get_start()
-        # Initialize the current path to the initial state
-        current_path = [current_state]
-        # Initialize the current g-cost to 0
-        current_g_cost = 0
-        # Initialize the current cost to the heuristic cost of the initial state
-        current_h_cost = self.heuristic(current_state, self.grid.get_goal())
-        current_f_cost = current_g_cost + current_h_cost
-
-        # While the current state is not the goal state
-        while current_state != self.grid.get_goal():
-            # Get the successors of the current state
-            successors = self.grid.get_successors(current_state=current_state,
-                                                  obstacles=self.obstacles)
-
-            # Initialize the successor with the lowest cost to the first successor
-            successor_with_lowest_cost = successors[0]
-            # Initialize the lowest cost to the cost of the successor with the lowest (weighted) cost
-            lowest_cost = current_g_cost + weight*self.heuristic(successor_with_lowest_cost, self.grid.get_goal())
-
-            # For each successor
-            for successor in successors[1:]:  # Skip the first successor since it's already been initialized
-                # If the cost of the successor is less than the lowest cost, note here we apply weight to the heuristic
-                if current_g_cost + weight*self.heuristic(successor, self.grid.get_goal()) < lowest_cost:
-                    # Set the successor with the lowest cost to the successor
-                    successor_with_lowest_cost = successor
-                    # Set the lowest cost to the cost of the successor
-                    lowest_cost = current_g_cost + weight*self.heuristic(successor, self.grid.get_goal())
-
-            # Set the current state to the successor with the lowest cost
-            current_state = successor_with_lowest_cost
-
-            if current_state in current_path:
-                raise ValueError('Path is not possible; current state has been expanded twice')
-            # Add the current state to the current path
-            else:
-                current_path.append(current_state)
-            # Set the current h-cost to the lowest cost
-            current_h_cost = lowest_cost
-            # Set the current g-cost to the current g-cost plus 1 (due to the nature of our movement/no diagonal edges)
-            current_g_cost += self.g_cost_per_step
-            # Set the current f-cost to the current g-cost plus the current h-cost
-            current_f_cost = current_g_cost + current_h_cost
-
-        # Return the current path and the current cost
-        return current_path, current_f_cost
-
-
+        pass
