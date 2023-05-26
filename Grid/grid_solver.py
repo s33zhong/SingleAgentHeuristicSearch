@@ -1,10 +1,11 @@
-from grid import Grid
+from Grid.grid import Grid
 import heapq
-from queue import PriorityQueue
+from solver import Solver
 
 
-class GridSolver:
+class GridSolver(Solver):
     def __init__(self, grid: Grid, obstacles):
+        super().__init__(heuristic=grid.euclidean_distance_2d, puzzle=grid)
         self.grid = grid
         self.heuristic = grid.euclidean_distance_2d
         self.g_cost_per_step = 1
