@@ -5,7 +5,6 @@ It is noted that the ranking function is inspired by the random permutation gene
 "Generating Random Permutations in Linear Time" by R. Durstenfeld.
 """
 
-
 def swap(i, j, array):
     temp = array[i]
     array[i] = array[j]

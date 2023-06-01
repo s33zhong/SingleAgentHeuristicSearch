@@ -89,7 +89,7 @@ class GridSolver(Solver):
 
     def greedy_best_first_search(self):
         """
-        Note: Greedy BFS is neither optimal nor complete
+        Note: Greedy BFS is not optimal, but it is complete on finite graphs
         greedy_best_first_search algorithm that takes in a grid, a heuristic, a start state, and a goal state,
           and returns a path from the start state to the goal state if possible; and False is returned if otherwise
         :return: either: a tuple of a list of states (locations on the grid) and the cost of the path
