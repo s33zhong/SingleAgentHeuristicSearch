@@ -104,7 +104,8 @@ def rank_corner(position, rotation):
     position_rank = lehmer_rank_corner(position)
     rotation_rank = convert_to_dec(rotation[:-1], 3)
     result = np.int32(position_rank * rank_constant + rotation_rank)
-    return result
+    return position_rank
+    # return result
 
 
 def unrank_corner(rank):

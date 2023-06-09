@@ -146,53 +146,6 @@ class SlidingTilesSolver:
 
         return list_of_actions, current_f_cost
 
-    def budgeted_tree_search(self, start_state=None):
-        """
-        Budgeted tree search algorithm that takes in a board, a heuristic, a start state, and a goal state, and returns
-          a list of actions from the start state to the goal state if possible; and False is returned if otherwise
-        :return: either: a tuple of a list of (str) actions and the cost of the actions (the g-cost, as the h-cost is 0)
-                     or: ValueError, if a path is impossible (unreachable goal, detected by re-expansion of states)
-        """
-        if start_state is None:
-            # Initialize the start state to a random state
-            start_state = self.sliding_tiles.generate_random_state()
-        else:
-            # Check that the start state is solvable
-            if not self.sliding_tiles.is_solvable(start_state):
-                raise ValueError('Invalid start state: {}'.format(start_state))
-        # Initialize the current state to the start state
-        self.sliding_tiles.current_state = start_state
-        list_of_actions = []
-
-        # Initialize the current g-cost to 0
-        current_g_cost = 0
-        # Initialize the current cost to the heuristic cost of the initial state
-        current_h_cost = self.heuristic(start_state)
-        current_f_cost = current_g_cost + current_h_cost
-
-        while not self.sliding_tiles.is_solved():
-            available_actions = []
-            available_successors = []
-            lowest_f_cost = -1
-            lowest_f_cost_successor = None
-            lowest_f_cost_action = None
-            for action in self.sliding_tiles.actions:
-                successor = self.sliding_tiles.successor(action)
-                if successor:
-                    available_actions.append(action)
-                    available_successors.append(successor)
-                    successor_g_cost = current_g_cost + self.g_cost_per_move
-                    successor_h_cost = self.heuristic(state=successor)
-                    successor_f_cost = successor_g_cost + successor_h_cost
-                    if lowest_f_cost == -1 or successor_f_cost < lowest_f_cost:
-                        lowest_f_cost = successor_f_cost
-                        lowest_f_cost_successor = successor
-                        lowest_f_cost_action = action
-            if lowest_f_cost_successor is None:  # all successors are False, no valid actions!
-                # unintended behavior! this should never happen in a sliding tile puzzle; at least one tile is movable
-                #   at any given state!
-                raise ValueError('No available successor! This should not happen!')
-
 
 
 

@@ -8,7 +8,7 @@ from cube import RubiksCube
 class PatternDataBase:
     def __init__(self, cube: RubiksCube, opt='corner'):
         self.cube = cube
-        self.db = np.zeros(88179839, dtype=np.uint8)  # maximum length
+        self.db = np.zeros(40320, dtype=np.uint8)  # maximum length
         self.opt = opt
         self.queue = deque()
 
@@ -29,7 +29,7 @@ class PatternDataBase:
         return True
 
     def export_db(self):
-        f = open("{}_pdb.bin".format(self.opt), "wb")
+        f = open("{}_pdb.bin".format(self.opt+'wo_rot'), "wb")
         byte_db = bytearray(self.db)
         f.write(byte_db)
         f.close()

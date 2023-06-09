@@ -4,6 +4,8 @@ class StateSpace:
         self.successor = None
         self.actions = None
         self.heuristic = None
+        self.start = None
+        self.goal = None
 
     def handle(self, action, state, **kwargs):
         try:
@@ -26,8 +28,8 @@ class StateSpace:
         self.heuristic = heuristic
         return True
 
-    def get_successor(self):
-        return self.successor
+    def get_successor(self, **kwargs):
+        pass
 
     def get_actions(self):
         return self.actions
@@ -40,3 +42,18 @@ class StateSpace:
 
     def get_successors(self, **kwargs):
         pass
+
+    def get_start(self):
+        return self.start
+
+    def set_start(self, start):
+        self.start = start
+        return True
+
+    def get_goal(self):
+        return self.goal
+
+    def set_goal(self, goal):
+        self.goal = goal
+        return True
+

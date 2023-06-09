@@ -15,12 +15,16 @@ class SlidingTiles(StateSpace):
         self.number_of_tiles = number_of_tiles  # The number of tiles in the puzzle n, n = width * height = width^2
         self.width = int(np.sqrt(number_of_tiles))  # The width of the puzzle
         self.height = int(np.sqrt(number_of_tiles))  # The height of the puzzle
-        self.current_state = None
         self.goal = list(range(1, number_of_tiles))  # The goal state is always the sorted list: [1, ..., n-1, 0]
         self.empty_tile = 0  # Note: The empty tile is always the last tile denoted as 0
         self.goal.append(self.empty_tile)  # For the sake of clarity; we define the empty tile explicitly
         self.start = None
         self.actions = sliding_tiles_actions
+
+    def valid_puzzle(self):
+        if self.start is None:
+            raise ValueError('Start state is not defined')
+        return self.is_solvable(self.start)
 
     def is_solvable(self, state, verbose=False):
         """
@@ -69,57 +73,27 @@ class SlidingTiles(StateSpace):
             np.random.shuffle(state)
         return state
 
-    def manhattan_distance(self, state=None):
+    def manhattan_distance(self, state=None, state_p=None):
         """
         Calculate the Manhattan distance between the current state and the goal state (solved state), which is
           the sum of the moves each tile need to take to reach its goal position, ignoring all tiles in their way.
         This is a relaxation from the problem, and an admissible heuristic function used in the A* algorithm.
         This method takes O(n) time and O(1) space as it iterates over the entire state once.
-        :param state: the state to calculate the Manhattan distance for; if None, then the current state is used
-        :return:      the Manhattan distance between the current state and the goal state
+        :param state:    the state to calculate the Manhattan distance for; if None, then the current state is used
+        :param state_p:  not used; only for compatibility with the parent class
+        :return:         the Manhattan distance between the current state and the goal state
         """
         distance = 0
-        if state is None:
-            for i in range(self.number_of_tiles):
-                if i != self.empty_tile:  # ignore the empty tile
-                    #  The distance is the sum of the vertical and horizontal distances
-                    height_difference = abs(self.goal.index(i) // self.width -
-                                            self.current_state.index(i) // self.width)  # vertical dist
-                    width_difference = abs(self.goal.index(i) % self.width -
-                                           self.current_state.index(i) % self.width)  # horizontal dist
-                    distance += height_difference + width_difference
-        else:
-            for i in range(self.number_of_tiles):
-                if i != self.empty_tile:  # ignore the empty tile
-                    #  The distance is the sum of the vertical and horizontal distances
-                    height_difference = abs(self.goal.index(i) // self.width -
-                                            state.index(i) // self.width)  # vertical dist
-                    width_difference = abs(self.goal.index(i) % self.width -
-                                           state.index(i) % self.width)  # horizontal dist
-                    distance += height_difference + width_difference
+        for i in range(self.number_of_tiles):
+            if i != self.empty_tile:  # ignore the empty tile
+                #  The distance is the sum of the vertical and horizontal distances
+                height_difference = abs(self.goal.index(i) // self.width -
+                                        state.index(i) // self.width)  # vertical dist
+                width_difference = abs(self.goal.index(i) % self.width -
+                                       state.index(i) % self.width)  # horizontal dist
+                distance += height_difference + width_difference
+        # print('Manhattan distance: {}'.format(distance))
         return distance
-
-    def get_available_successors(self):
-        """
-        Get the neighbours (indices) of the empty block (0) in the current state. Then, we get to see
-          which tiles can be moved (they are the successors).
-        This method is used to generate the successors of the current state by applying all possible
-          actions on it. Both the time and space complexity of this method is O(1) as there are at most
-          4 actions.
-        :return: a dict of neighbours (indices) that is available to be moved as values and the
-                 possible actions that can be taken as keys.
-        """
-        available_neighbours = dict()
-        empty_block_index = self.current_state.index(0)  # see where the empty block is
-        if empty_block_index % self.width != 0:  # if the empty block is not on the left edge
-            available_neighbours['left'] = empty_block_index - 1  # add the left tile to the neighbours
-        if empty_block_index % self.width != self.width - 1:  # if the empty block is not on the right edge
-            available_neighbours['right'] = empty_block_index + 1  # add the right tile to the neighbours
-        if empty_block_index > self.width:  # if the empty block is not on the top edge
-            available_neighbours['up'] = empty_block_index - self.width  # add the top tile to the neighbours
-        if empty_block_index < self.number_of_tiles - self.width:  # if the empty block is not on the bottom edge
-            available_neighbours['down'] = empty_block_index + self.width  # add the bottom tile to the neighbours
-        return available_neighbours
 
     @staticmethod
     def swap_neighbours(state_list, index_1, index_2):
@@ -137,31 +111,80 @@ class SlidingTiles(StateSpace):
         temp_list[index_2] = state_list[index_1]
         return temp_list
 
-    def get_successors(self, action, verbose=False):
+    def get_successor(self, current_state, action, verbose=False):
+        empty_tile_index = current_state.index(self.empty_tile)
+        # print(verbose, action, current_state, empty_tile_index)
+        neighbour_index = None
+        if action == 'up':
+            neighbour_index = empty_tile_index - self.width
+        elif action == 'down':
+            neighbour_index = empty_tile_index + self.width
+        elif action == 'left':
+            neighbour_index = empty_tile_index - 1
+        elif action == 'right':
+            neighbour_index = empty_tile_index + 1
+        if neighbour_index is not None:
+            new_state = self.swap_neighbours(current_state, empty_tile_index, neighbour_index)
+            # if verbose:
+            #     print('Swapping index {} with {}'.format(empty_tile_index, neighbour_index))
+            #     print('Swapping {} with {}'.format(current_state[empty_tile_index],
+            #                                        current_state[neighbour_index]))
+            #     print('Current state:\n{}'.format(np.array(current_state).reshape(self.width, self.width)))
+            #     print('New state:\n{}'.format(np.array(new_state).reshape(self.width, self.width)))
+            return new_state
+        else:
+            return None
+
+    def get_successors(self, current_state, last_action, verbose=False):
         """
         Get the successors of the current state by applying the given action on it.
         This method would require O(1) time and O(n) space where n is the number of tiles (which would be constant,
             so O(1) as well). In particular, the time complexity is O(1) because the number of actions is 4.
-        :param verbose:   whether to print the action and its consequence or not
-        :param action:    str, the action to be applied on the current state, one of ['up', 'down', 'left', 'right']
+        :param current_state:  list, the current state denoted by a list with indices as positions and values as tiles
+        :param last_action:    str, the last action taken to reach the current state
+        :param verbose:        whether to print the action and its consequence or not
         :return:  either: list, the successor state of the current state with the given action applied on it;
                       or: False, if the given action is invalid
         """
-        available_successors = self.get_available_successors()  # get all the possible successors given all actions
-        if action not in available_successors.keys():
-            Warning('Invalid action')
+        available_actions = self.get_available_actions(current_state, last_action)  # get all the possible successors
+        successors = []
+        for action in available_actions:
+            # print('verbose', verbose)
+            successor = self.get_successor(current_state=current_state, action=action, verbose=verbose)
+            if successor is not None:
+                successors.append((action, successor))
+        if len(successors) == 0:
             return False
-        else:
-            neighbour_index = available_successors[action]  # get the index of the neighbour to be swapped
-            empty_index = self.current_state.index(0)  # get the index of the empty block
-            if verbose:
-                print('Swapping index {} with {}'.format(empty_index, neighbour_index))
-                print('Swapping {} with {}'.format(self.current_state[empty_index], self.current_state[neighbour_index]))
-                print('Current state: {}'.format(np.array(self.current_state).reshape(self.width, self.width)))
-            successor = self.swap_neighbours(self.current_state, neighbour_index, empty_index)  # swap the tiles
-            if verbose:
-                print('Successor state: {}'.format(np.array(successor).reshape(self.width, self.width)))
-            return successor
+        return successors
+
+    def get_available_actions(self, current_state, last_action=None):
+        """
+        Get the actions that are available to be taken from the current state.
+        This method is used to generate the successors of the current state by applying all possible
+          actions on it. Both the time and space complexity of this method is O(1) as there are at most
+          4 actions.
+        :return: a list of possible actions that can be taken from the current state
+        """
+        available_actions = ['up', 'down', 'left', 'right']
+        if last_action == 'up':
+            available_actions.remove('down')
+        elif last_action == 'down':
+            available_actions.remove('up')
+        elif last_action == 'left':
+            available_actions.remove('right')
+        elif last_action == 'right':
+            available_actions.remove('left')
+
+        empty_block_index = current_state.index(0)  # see where the empty block is
+        if empty_block_index % self.width == 0:  # if the empty block is on the left edge
+            available_actions.remove('left')  # moving left would be impossible
+        if empty_block_index % self.width == self.width - 1:  # if the empty block is not on the right edge
+            available_actions.remove('right')  # moving right would be impossible
+        if empty_block_index < self.width:  # if the empty block is not on the top edge
+            available_actions.remove('up')  # moving up would be impossible
+        if empty_block_index > self.number_of_tiles - self.width - 1:  # if the empty block is not on the bottom edge
+            available_actions.remove('down')  # moving down would be impossible
+        return available_actions
 
     def is_solved(self, state=None):
         """
@@ -171,7 +194,16 @@ class SlidingTiles(StateSpace):
             so O(1) as well).
         :return: True if the current state is the goal state, False otherwise
         """
-        if state is None:
-            return self.current_state == self.goal
-        else:
-            return state == self.goal
+        # print('Checking if the current state is the goal state...')
+        # print('goal: {}'.format(self.goal))
+        # print('state: {}'.format(state))
+        # print('is solved: {}'.format(state == self.goal))
+        return state == self.goal
+
+    @staticmethod
+    def to_string(state):
+        return ''.join(str(e) for e in state)
+
+    @staticmethod
+    def from_string(state_string):
+        return [int(e) for e in state_string]
